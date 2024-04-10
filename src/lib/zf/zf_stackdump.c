@@ -138,7 +138,7 @@ void dump_alts(SkewPointer<zf_stack_impl> stimpl)
 }
 
 
-void zf_stack_dump(struct zf_stack* stack)
+void zf_stack_dump(struct zf_stack* stack, int onload_dh)
 {
   auto stimpl = SkewPointer<zf_stack_impl>(ZF_CONTAINER(struct zf_stack_impl,
                                                         st, stack));
@@ -152,7 +152,74 @@ void zf_stack_dump(struct zf_stack* stack)
 };
 
 
-void zf_stack_dump_summary(struct zf_stack* stack)
+void dump_stack_vi_stats(SkewPointer<zf_stack_impl> stimpl, int onload_dh) {
+  SkewPointer<zf_stack> stack = stimpl.propagate_skew(&stimpl->st);
+  
+  for( int i = 0; i < stack->nics_n; i++ ) {
+    struct zf_stack_nic* nic = &stack->nic[i];
+    struct ef_vi* vi = &nic->vi;
+    int rc;
+    int j;
+
+    if( !vi->inited )
+      return;
+
+    const ef_vi_stats_layout* vi_stats_layout;
+    uint8_t* stats_data;
+
+    ef_vi_stats_query_layout(vi, &vi_stats_layout);
+    
+    if( (stats_data = (uint8_t*)malloc(vi_stats_layout->evsl_data_size)) == NULL )
+      return;
+
+    for( j = 0; j < vi_stats_layout->evsl_fields_num; j++ ) {
+      const ef_vi_stats_field_layout* f = &vi_stats_layout->evsl_fields[j];
+      int n_pad = strlen(f->evsfl_name);
+      if( n_pad < 10 )
+        n_pad = 10;
+      zf_dump("  %*s", n_pad, vi_stats_layout->evsl_fields[j].evsfl_name);
+    }
+    zf_dump("\n");
+
+    rc = ef_vi_stats_query(vi, vi->dh, stats_data, 0);
+    if( rc != 0 ) {
+      zf_dump("Failed to query stats (%d : %d/%d)\n", rc, onload_dh, vi->dh);
+      free(stats_data);
+      return;
+    }
+
+    for( j = 0; j < vi_stats_layout->evsl_fields_num; j++ ) {
+      const ef_vi_stats_field_layout* f = &vi_stats_layout->evsl_fields[j];
+      int n_pad = strlen(f->evsfl_name);
+      if( n_pad < 10 )
+        n_pad = 10;
+      switch( f->evsfl_size ) {
+        case sizeof(uint32_t):
+          zf_dump("  %*d", n_pad, *(uint32_t*)(stats_data + f->evsfl_offset));
+          break;
+        default:
+          zf_dump("  %*s", n_pad, ".");
+      };
+    }
+    zf_dump("\n");
+
+    free(stats_data);
+  }
+}
+
+
+void zf_stack_vi_stats(struct zf_stack* stack, int onload_dh)
+{
+  auto stimpl = SkewPointer<zf_stack_impl>(ZF_CONTAINER(struct zf_stack_impl,
+                                                        st, stack));
+
+  zf_dump("============================================================\n");
+  dump_stack_vi_stats(stimpl, onload_dh);
+  zf_dump("============================================================\n");
+};
+
+
+void zf_stack_dump_summary(struct zf_stack* stack, int onload_dh)
 {
   struct zf_stack_impl* sti = ZF_CONTAINER(struct zf_stack_impl, st, stack);
   zf_dump("%." ZF_STRINGIFY(ZF_STACK_NAME_SIZE) "s id=%-5d pid=%d\n",

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
   int ids[MAX_DUMP_STACKS];
   int onload_dh;
   int num_stacks = 0;
-  void (*cmd)(struct zf_stack*) = zf_stack_dump_summary;
+  void (*cmd)(struct zf_stack*, int onload_dh) = zf_stack_dump_summary;
 
   ZF_TRY(oo_fd_open(&onload_dh));
   ZF_TRY(zf_init());
@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
     /* Support "lots" as an undocumented alias for "dump". */
     else if( strcmp(argv[0], "dump") == 0 || strcmp(argv[0], "lots") == 0 )
       cmd = zf_stack_dump;
+    else if( strcmp(argv[0], "vi-stats") == 0 )
+      cmd = zf_stack_vi_stats;
     else if( strcmp(argv[0], "version") == 0 )
       version();
     else if( strcmp(argv[0], "help") == 0 )
@@ -74,7 +76,7 @@ int main(int argc, char *argv[])
     struct zf_stack* stack;
     int rc = zf_stack_map(onload_dh, ids[i], &stack);
     if( rc == 0 )
-      cmd(stack);
+      cmd(stack, onload_dh);
     else
       zf_log(NULL, "Failed to map stack %d (rc = %d)\n", ids[i], rc);
   }

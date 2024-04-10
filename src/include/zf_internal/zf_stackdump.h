@@ -11,10 +11,13 @@ ZF_LIBENTRY ZF_COLD int
 zf_stack_map(int onload_dh, int stack_shm_id, struct zf_stack** addr_out);
 
 ZF_LIBENTRY ZF_COLD void
-zf_stack_dump(struct zf_stack* stack);
+zf_stack_dump(struct zf_stack* stack, int onload_dh);
 
 ZF_LIBENTRY ZF_COLD void
-zf_stack_dump_summary(struct zf_stack* stack);
+zf_stack_vi_stats(struct zf_stack* stack, int onload_dh);
+
+ZF_LIBENTRY ZF_COLD void
+zf_stack_dump_summary(struct zf_stack* stack, int onload_dh);
 
 ZF_LIBENTRY ZF_COLD int
 zf_get_all_stack_shm_ids(int onload_dh, int* shm_ids, size_t count);
