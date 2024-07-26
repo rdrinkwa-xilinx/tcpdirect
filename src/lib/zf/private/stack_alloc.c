@@ -418,6 +418,81 @@ static void zf_stack_init_zock_resource(zf_stack_impl* sti,
 }
 
 
+static int zf_stack_init_load_profile(struct zf_attr* attr)
+{
+  FILE * fp = NULL;
+  char * line = NULL;
+  size_t len;
+  int rc;
+  int verbose = 0;
+  char fname[120];
+
+#if 0
+  snprintf(fname, 80, "/usr/libexec/tcpdirect/profiles/%s", attr->profile);
+
+  if( ((fp = fopen(fname, "r")) == NULL ) &&
+      ((fp = fopen(attr->profile, "r")) == NULL ) ) {
+    /* File not found at path - abort */
+    zf_log_stack_warn(NO_STACK, "Unable to find profile file (%s)", attr->profile);
+    return -1;
+  }
+#else
+  snprintf(fname, 120, "/usr/libexec/tcpdirect/profiles/%s", attr->profile);
+  if( access(fname, R_OK) == 0 ) {
+    snprintf(fname, 120, "/home/rdrinkwa/git/tcpdirect/test.sh /usr/libexec/tcpdirect/profiles/%s %s", attr->profile, attr->interface);
+    fp = popen(fname, "r");
+  }
+  snprintf(fname, 120, "%s", attr->profile);
+  if( access(attr->profile, R_OK) == 0 ) {
+    snprintf(fname, 120, "/home/rdrinkwa/git/tcpdirect/test.sh %s %s", attr->profile, attr->interface);
+    fp = popen(fname, "r");
+  }
+  
+  if( fp == NULL ) {
+    zf_log_stack_warn(NO_STACK, "Unable to find profile file (%s)", attr->profile);
+    return -1;
+  }
+#endif
+
+  while ( (rc = getline(&line, &len, fp)) != -1 ) {
+    char * const p = strpbrk(line, "\n\r");
+
+    if( p )
+      *p = '\0';
+
+    if( (len > 3) && (line[0] != '#') ) {
+      if( line[0] == '-') {
+        switch( line[1] ) {
+          case 'v':
+            verbose = 1;
+            break;
+        }
+      } else {
+        char * const eq = strchr(line, '=');
+        if( eq != NULL ) {
+          const char * name = line;
+          const char * val = eq + 1;
+          
+          *eq = '\0';
+          if( verbose ) {
+            zf_log_stack_info(NO_STACK, "Setting %s=%s\n", name, val);
+          }
+          zf_attr_set_from_str(attr, name, val); /* ignore failure */
+        }
+      }
+    }
+  }
+  free(line);
+#if 0
+  fclose(fp);
+#else
+  pclose(fp);
+#endif
+
+  return 0;
+}
+
+
 /* This function initialises all stack state that has no resource
  * dependencies.
  */
@@ -425,6 +500,10 @@ static void zf_stack_init_state(struct zf_stack_impl* sti,
                                 struct zf_attr* attr)
 {
   zf_stack* st = &sti->st;
+
+  if( (attr->profile != NULL) && strlen(attr->profile) ) {
+    zf_stack_init_load_profile(attr);
+  }
 
   sti->alloc_len = ZF_STACK_ALLOC_SIZE;
   sti->natural_sti_addr = sti;
@@ -776,6 +855,9 @@ int zf_stack_alloc(struct zf_attr* attr, struct zf_stack** stack_out)
                          "are huge pages available?\n");
     return -ENOMEM;
   }
+
+  if( (attr->profile != NULL) && strlen(attr->profile) )
+    zf_stack_init_load_profile(attr);
 
   memset(sti, 0, sizeof(*sti));
   zf_stack_init_state(sti, attr);

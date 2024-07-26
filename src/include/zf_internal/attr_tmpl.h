@@ -73,6 +73,11 @@ ZF_ATTR(str, log_file, stable, NULL, "(stderr)",
 
         "Use this file instead of stderr for log messages.")
 
+ZF_ATTR(str, profile, stable, "", "",
+        "zf_stack",
+
+        "Profile to load that will set attributes.")
+
 /**********************************************************************
  * Generic attributes.
  */
