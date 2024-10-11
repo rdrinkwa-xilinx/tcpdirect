@@ -167,5 +167,71 @@ enum zf_stack_feature {
 */
 ZF_LIBENTRY int zf_stack_query_feature(struct zf_stack* stack, enum zf_stack_feature feature);
 
+/*! \brief Layout for a field of statistics */
+typedef struct {
+  /** Name of statistics field */
+  char* zfsfl_name;
+  /** Offset of statistics file, in bytes */
+  int   zfsfl_offset;
+  /** Size of statistics field, in bytes */
+  int   zfsfl_size;
+} zf_stats_field_layout;
+
+/*! \brief Layout for statistics */
+typedef struct {
+  /** Size of data for statistics */
+  int                      zfsl_data_size;
+  /** Number of fields of statistics */
+  int                      zfsl_fields_num;
+  /** Array of fields of statistics */
+  zf_stats_field_layout    zfsl_fields[];
+} zf_stats_layout;
+
+/*! \brief Retrieve layout for available statistics
+**
+** \param stack      The stack to query.
+** \param layout_out Pointer to an zf_stats_layout*, that is updated on return
+**                   with the layout for available statistics.
+** \param layout_sz  Size of the layout_out memory in number of zf_stats_layout
+**                   structures.
+**
+** \return number of entries that will be valid in layout_out, or a negative
+**         error code. This will always be less than or equal to layout_sz.
+**
+** Retrieve layout for available statistics.
+*/
+ZF_LIBENTRY int zf_stats_query_layout(struct zf_stack* stack,
+                                      const zf_stats_layout** const layout_out,
+                                      int layout_sz);
+
+
+/*! \brief Retrieve a set of statistic values
+**
+** \param stack    The stack to query.
+** \param data     Pointer to a buffer, into which the statistics are
+**                 retrieved.\n
+**                 The size of this buffer should be equal to the sum of all
+**                 zfsl_data_size fields of the layout description, that can be
+**                 fetched using zf_stats_query_layout().
+** \param layout   Pointer to an zf_stats_layout*, that was generated for this
+**                 stack by zf_stats_query_layout.
+** \param nic_cnt  Size of layout memory region in number of structures.
+** \param do_reset True to reset the statistics after retrieving them.
+**
+** \return number of entries that will be valid in data, or a negative
+**         error code.
+**
+** Retrieve a set of statistic values.
+**
+** If do_reset is true, the statistics are reset after reading.
+**
+** \note This requires full feature firmware. If used with low-latency
+** firmware, no error is given, and the statistics are invalid (typically
+** all zeroes).
+*/
+ZF_LIBENTRY int zf_stats_query(struct zf_stack* stack, void* data,
+                               const zf_stats_layout** const layout,
+                               int nic_cnt, int do_reset);
+
 #endif /* __ZF_STACK_H__ */
 /** @} */
